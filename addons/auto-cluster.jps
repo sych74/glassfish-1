@@ -150,8 +150,15 @@ actions:
       - api: env.control.SetNodeGroupDisplayName
         nodeGroup: das
         displayName: DAS
-      # ---]
-      
+    # ---]
+    #for 5.8.1+ [---
+    - if (nodes.das): 
+      - env.control.AddContainerEnvVars[${nodes.das.master.id}]:
+         vars: {"DAS":"true"}
+      - env.control.AddDockerVolume[${nodes.das.master.id}]:
+         path: ${globals.path}
+    # ---]
+    
     - api: env.control.SetNodeGroupDisplayName
       nodeGroup: cp
       displayName: Workers
