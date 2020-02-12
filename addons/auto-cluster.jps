@@ -11,4 +11,4 @@ onInstall:
   install:
     jps: ${baseUrl}/scripts/auto-cluster-logic.jps?_r=${fn.random}
     envName: ${env.envName}
-    nodeGroup: ${this.nodeGroup}
+    nodeGroup: ${targetNodes.nodeGroup}
