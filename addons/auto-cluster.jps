@@ -1,6 +1,6 @@
 ---
-jpsType: update
-jpsVersion: '0.99'
+type: update
+version: 1.6.1
 id: glassfish-cluster-addon
 name: GlassFish Auto-Cluster
 logo: https://github.com/jelastic-jps/glassfish/raw/master/glassfish-cluster/img/glassfish-logo.png
