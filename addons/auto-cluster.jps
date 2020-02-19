@@ -217,8 +217,8 @@ actions:
         cat ~/.ssh/authorized_keys; echo ///
         cat ~/.ssh/id_rsa.pub; echo ///
         cat ~/.ssh/id_rsa
-    - script: |
-        var files = "${response.out}".split("///"),
+    - script: |-
+        var files = '${response.out}'.split('///'),
             cmd = "echo -e '" + files[0] + "' > $PSWD_FILE;" +
                   "echo -e '" + files[1] + "' > ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys;" + 
                   "echo -e '" + files[2] + "' > ~/.ssh/id_rsa.pub;" + 
