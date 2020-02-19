@@ -229,11 +229,8 @@ actions:
       path: ${globals.path}/id_rsa
       user: jelastic
       body: ${response.out}
-  - cmd[${nodes.das.master.id}]: 
-    - cat ~/.ssh/id_rsa      
-    - cat ~/.ssh/id_rsa.pub
-  - log: ${response.out}
-  - log: =================================
+  - cmd[${nodes.das.master.id}]: cat $PSWD_FILE   
+  - cmd[${nodes.cp.join(id)}]: echo ${response.out} > $PSWD_FILE
         
   - api: env.control.AddContainerVolumeByGroup
     nodeGroup: cp
