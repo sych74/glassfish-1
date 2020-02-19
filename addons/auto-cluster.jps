@@ -8,32 +8,31 @@ description: 'Auto-clustering: transforming standalone nodes to cluster'
 
 globals:
   port: 28080
-  path: /home/jelastic/.ssh
   payara: false
   
 nodeGroupAlias:
   ${targetNodes.nodeGroup}: cp
    
 onInstall:
-- if ('${nodes.cp.master.nodeType}'.indexOf('payara') > -1):
-    setGlobals:
-      payara: true
-      
-- if (nodes.das && ${settings.clone:false}):
-  - cleanCluster
-  - localhost:4848->das:4848:
-      nodeId: ${nodes.das.master.id}
-      dasNodeId: ${nodes.das.master.id}
-  - forEach(nodes.cp):
-    - exposePortsAndUpdateLink2Das: ${@i.id}
-    - if (${globals.payara}):
-        addHost2Hazelcast: ${@i.id}
-  - restartContainers[cp]
-  - restartRequired
-  
-- if (!nodes.das || (nodes.das && !${settings.clone:false})):
-    buildCluster:
-      redeploy: false        
+  - if ('${nodes.cp.master.nodeType}'.indexOf('payara') > -1):
+      setGlobals:
+        payara: true
+
+  - if (nodes.das && ${settings.clone:false}):
+    - cleanCluster
+    - localhost:4848->das:4848:
+        nodeId: ${nodes.das.master.id}
+        dasNodeId: ${nodes.das.master.id}
+    - forEach(nodes.cp):
+      - exposePortsAndUpdateLink2Das: ${@i.id}
+      - if (${globals.payara}):
+          addHost2Hazelcast: ${@i.id}
+    - restartContainers[cp]
+    - restartRequired
+
+  - if (!nodes.das || (nodes.das && !${settings.clone:false})):
+      buildCluster:
+        redeploy: false        
         
 onBeforeServiceScaleOut[cp]:
   - if (nodes.das):
@@ -170,17 +169,15 @@ actions:
     cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh redeploy
     
   copyConfigsAndApps:
-  - cmd[${nodes.cp.master.id}]: |-
-      cp $STACK_PATH/glassfish/domains/domain1/config/domain.xml ${globals.path}/domain.xml
-      cp -r $STACK_PATH/glassfish/domains/domain1/applications ${globals.path}
-  - cmd[das]: |-
-      mv ${globals.path}/domain.xml $STACK_PATH/glassfish/domains/domain1/config/domain.xml
-      mv ${globals.path}/applications $STACK_PATH/glassfish/domains/domain1
+    - cmd[${nodes.cp.master.id}]: |-
+        path=$STACK_PATH/glassfish/domains/domain1
+        scp -o StrictHostKeyChecking=no $path/config/domain.xml jelastic@das:$path/config/domain.xml
+        scp -r $path/applications jelastic@das:$path
       
   exposePorts:
-    cmd[${this}]:
-    - echo JELASTIC_EXPOSE=${globals.port} >> /.jelenv
-    - iptables -t nat -I PREROUTING -p tcp -m tcp --dport 4848 -j REDIRECT --to-ports 24848
+    cmd[${this}]: |-
+      echo JELASTIC_EXPOSE=${globals.port} >> /.jelenv
+      iptables -t nat -I PREROUTING -p tcp -m tcp --dport 4848 -j REDIRECT --to-ports 24848
     user: root
     
   addHost2Hazelcast:
@@ -208,15 +205,15 @@ actions:
       echo '<html><head><meta http-equiv="refresh" content="0;url=https://node${nodes.das.master.id}-${env.domain}:4848/"/></head></html>' > $d/statusNotDAS.html
       jar uf $STACK_PATH/glassfish/modules/kernel.jar $d/statusNotDAS.html
       rm -rf com
-  
+
+  generateSSHKeys: 
+    cmd[${nodes.das.master.id}]: |-
+      echo -e 'y\n'|ssh-keygen -t rsa -b 4096 -q -N '' -f ~/.ssh/id_rsa
+      cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
+    
   uploadSSHKeys:
     - cmd[${nodes.das.master.id}]: |-
-        echo -e 'y\n'|ssh-keygen -t rsa -b 4096 -q -N '' -f ~/.ssh/id_rsa
-        cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
-        cat $PSWD_FILE; echo ///
-        cat ~/.ssh/authorized_keys; echo ///
-        cat ~/.ssh/id_rsa.pub; echo ///
-        cat ~/.ssh/id_rsa
+        cat $PSWD_FILE; echo ///; cat ~/.ssh/authorized_keys; echo ///; cat ~/.ssh/id_rsa.pub; echo ///; cat ~/.ssh/id_rsa
     - script: |
         var files = out.split('///'),
             cmd = "echo -e '" + files[0] + "' > $PSWD_FILE;" +
@@ -229,6 +226,7 @@ actions:
 
   configureVolumesAndLinks:  
     - cmd[${nodes.cp.master.id}]: mv $PSWD_FILE ${PSWD_FILE}.old
+    - generateSSHKeys
     - uploadSSHKeys: cp
     - forEach(nodes.cp):
       - api: env.control.LinkDockerNodes
