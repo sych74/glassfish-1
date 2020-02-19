@@ -155,7 +155,7 @@ actions:
     - if (nodes.das): 
       - env.control.AddContainerEnvVars[${nodes.das.master.id}]:
          vars: {"DAS":"true"}
-      - env.control.AddDockerVolume[${nodes.das.master.id}]:
+      - env.control.AddContainerVolume[${nodes.das.master.id}]:
          path: ${globals.path}
     # ---]
     
@@ -212,23 +212,26 @@ actions:
       jar uf $STACK_PATH/glassfish/modules/kernel.jar $d/statusNotDAS.html
       rm -rf com
       
-  configureVolumesAndLinks:
+  configureVolumesAndLinks:  
   - cmd[${nodes.cp.master.id}]: cp $PSWD_FILE ~/pswd
+  - cmd[${nodes.das.master.id}]: |-
+      echo -e 'y\n'|ssh-keygen -t rsa -b 4096 -q -N '' -f ~/.ssh/id_rsa
+      cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
+      cat ~/.ssh/authorized_keys
+  - log: ${response.out}
+  - environment.file.write:
+      nodeGroup: cp
+      path: ~/.ssh/authorized_keys
+      user: jelastic
+      body: ${response.out}
+        
   - api: env.control.AddContainerVolumeByGroup
     nodeGroup: cp
     path: ${globals.path}
-  - api: env.file.AddMountPointByGroup
-    nodeGroup: cp
-    path: ${globals.path}
-    protocol: nfs
-    sourcePath: ${globals.path}
-    sourceNodeId: ${nodes.das.first.id}
-    name: SSH Keys
-    readOnly: false
   - cmd[${nodes.cp.master.id}]: mv ~/pswd ${PSWD_FILE}.old
   - forEach(nodes.cp):
     - api: env.control.LinkDockerNodes
-      sourceNodeId: ${nodes.das.first.id}
+      sourceNodeId: ${nodes.das.master.id}
       targetNodeId: ${@i.id}
       alias: das
       groupAlias: das
