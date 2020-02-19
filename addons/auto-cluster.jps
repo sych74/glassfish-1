@@ -15,15 +15,15 @@ nodeGroupAlias:
   ${targetNodes.nodeGroup}: cp
    
 onInstall:
-- if ('${nodes.cp.first.nodeType}'.indexOf('payara') > -1):
+- if ('${nodes.cp.master.nodeType}'.indexOf('payara') > -1):
     setGlobals:
       payara: true
       
 - if (nodes.das && ${settings.clone:false}):
   - cleanCluster
   - localhost:4848->das:4848:
-      nodeId: ${nodes.das.first.id}
-      dasNodeId: ${nodes.das.first.id}
+      nodeId: ${nodes.das.master.id}
+      dasNodeId: ${nodes.das.master.id}
   - forEach(nodes.cp):
     - exposePortsAndUpdateLink2Das: ${@i.id}
     - if (${globals.payara}):
@@ -36,15 +36,16 @@ onInstall:
       redeploy: false        
         
 onBeforeServiceScaleOut[cp]:
-- if (nodes.das):
-    forEach(event.response.nodes):
-    - if (${globals.payara}):
-        addHost2Hazelcast: ${@i.id}
-    - exposePortsAndUpdateLink2Das: ${@i.id}
-    - restartContainers[${@i.id}]
-- if (!nodes.das && nodes.cp.length > 1):
-    buildCluster:
-      redeploy: true
+  - if (nodes.das):
+      forEach(event.response.nodes):
+        - uploadSSHKeys: ${@i.id}
+        - if (${globals.payara}):
+            addHost2Hazelcast: ${@i.id}
+        - exposePortsAndUpdateLink2Das: ${@i.id}
+        - restartContainers[${@i.id}]
+  - if (!nodes.das && nodes.cp.length > 1):
+      buildCluster:
+        redeploy: true
       
 onBeforeScaleIn[cp]:
   forEach(event.response.nodes):
@@ -83,55 +84,55 @@ onAfterRedeployContainer[cp]:
 onAfterMigrate:
   if (!nodes.das):
     localhost:4848->das:4848:
-      nodeId: ${nodes.cp.first.id}
-      dasNodeId: ${nodes.cp.first.id}
+      nodeId: ${nodes.cp.master.id}
+      dasNodeId: ${nodes.cp.master.id}
   if (nodes.das):
     - localhost:4848->das:4848:
-        nodeId: ${nodes.das.first.id}
-        dasNodeId: ${nodes.das.first.id}
+        nodeId: ${nodes.das.master.id}
+        dasNodeId: ${nodes.das.master.id}
     - localhost:4848->das:4848:
         nodeId: cp
-        dasNodeId: ${nodes.das.first.id}      
+        dasNodeId: ${nodes.das.master.id}      
     - addRedirect2DasAdmin: cp
 
 onAfterBindSSL:
   - if ( nodes.cp.length = 1):
     - log: after bind SSL
-    - cmd[${nodes.das.first.id}]:
+    - cmd[${nodes.das.master.id}]:
       - mkdir -p /var/lib/jelastic/SSL/
       - chown $STACK_USER:$STACK_USER -R /var/lib/jelastic/SSL/
       user: root
     - environment.file.write:
-        nodeid: ${nodes.das.first.id}
+        nodeid: ${nodes.das.master.id}
         path: /var/lib/jelastic/SSL/customssl.conf
         user: root
         body: |
           key=${event.params.cert_key}
           intermediate=${event.params.intermediate}
           cert=${event.params.cert}
-    - cmd[${nodes.das.first.id}]:
+    - cmd[${nodes.das.master.id}]:
       - jem ssl install
       user: root
 
 onAfterRemoveSSL:
   - if ( nodes.cp.length = 1):
-    - cmd[${nodes.das.first.id}]:
+    - cmd[${nodes.das.master.id}]:
       - jem ssl remove
       user: root
   
 actions:
   cleanCluster:
-    cmd[${nodes.das.first.id}]: $STACK_PATH/service.sh clean
+    cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh clean
     
   buildCluster:
     - if (!nodes.das):
       #for < 5.8.1 [---
       - addNodes:
-          fixedCloudlets: ${nodes.cp.first.fixedCloudlets}
-          flexibleCloudlets: ${nodes.cp.first.flexibleCloudlets}
+          fixedCloudlets: ${nodes.cp.master.fixedCloudlets}
+          flexibleCloudlets: ${nodes.cp.master.flexibleCloudlets}
           displayName: DAS
-          nodeType: ${nodes.cp.first.nodeType}
-          tag: ${nodes.cp.first.version}
+          nodeType: ${nodes.cp.master.nodeType}
+          tag: ${nodes.cp.master.version}
           nodeGroup: das
           metadata:
             layer: das
@@ -166,10 +167,10 @@ actions:
     cmd[das]: $STACK_PATH/service.sh restartRequired
   
   redeployApps:
-    cmd[${nodes.cp.first.id}]: $STACK_PATH/service.sh redeploy
+    cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh redeploy
     
   copyConfigsAndApps:
-  - cmd[${nodes.cp.first.id}]: |-
+  - cmd[${nodes.cp.master.id}]: |-
       cp $STACK_PATH/glassfish/domains/domain1/config/domain.xml ${globals.path}/domain.xml
       cp -r $STACK_PATH/glassfish/domains/domain1/applications ${globals.path}
   - cmd[das]: |-
@@ -197,19 +198,18 @@ actions:
   - exposePorts: ${this}
   - localhost:4848->das:4848:
       nodeId: ${this}
-      dasNodeId: ${nodes.das.first.id}
+      dasNodeId: ${nodes.das.master.id}
   - addRedirect2DasAdmin: ${this}
   
   addRedirect2DasAdmin:
     cmd[${this}]: |-
       d=com/sun/enterprise/v3/admin/adapter
       mkdir -p $d
-      echo '<html><head><meta http-equiv="refresh" content="0;url=https://node${nodes.das.first.id}-${env.domain}:4848/"/></head></html>' > $d/statusNotDAS.html
+      echo '<html><head><meta http-equiv="refresh" content="0;url=https://node${nodes.das.master.id}-${env.domain}:4848/"/></head></html>' > $d/statusNotDAS.html
       jar uf $STACK_PATH/glassfish/modules/kernel.jar $d/statusNotDAS.html
       rm -rf com
-      
-  configureVolumesAndLinks:  
-    - cmd[${nodes.cp.master.id}]: cp $PSWD_FILE ~/pswd
+  
+  uploadSSHKeys:
     - cmd[${nodes.das.master.id}]: |-
         echo -e 'y\n'|ssh-keygen -t rsa -b 4096 -q -N '' -f ~/.ssh/id_rsa
         cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
@@ -223,10 +223,13 @@ actions:
                   "echo -e '" + files[1] + "' > ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys;" + 
                   "echo -e '" + files[2] + "' > ~/.ssh/id_rsa.pub;" + 
                   "echo -e '" + files[3] + "' > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa";      
-        return {result:0, onAfterReturn:{'cmd[cp]':cmd}}
+        return {result:0, onAfterReturn:{'cmd[' + ids + ']':cmd}}
       out: ${response.out}
+      ids: ${this}
 
-    - cmd[${nodes.cp.master.id}]: mv ~/pswd ${PSWD_FILE}.old
+  configureVolumesAndLinks:  
+    - cmd[${nodes.cp.master.id}]: mv $PSWD_FILE ${PSWD_FILE}.old
+    - uploadSSHKeys: cp
     - forEach(nodes.cp):
       - api: env.control.LinkDockerNodes
         sourceNodeId: ${nodes.das.master.id}
@@ -237,11 +240,11 @@ actions:
       - if (${globals.payara}):
           addHost2Hazelcast: ${@i.id}
     - localhost:4848->das:4848:
-        nodeId: ${nodes.das.first.id}
-        dasNodeId: ${nodes.das.first.id}
+        nodeId: ${nodes.das.master.id}
+        dasNodeId: ${nodes.das.master.id}
     - if (${this.redeploy}): copyConfigsAndApps
     - api: env.control.ExecDockerRunCmd
-      nodeId: ${nodes.das.first.id}
+      nodeId: ${nodes.das.master.id}
     - if (${this.redeploy}): redeployApps  
     - restartContainers[cp]
     - restartRequired
