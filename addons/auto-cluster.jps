@@ -221,7 +221,7 @@ actions:
   - log: ${response.out}
   - environment.file.write:
       nodeGroup: cp
-      path: ~/.ssh/authorized_keys
+      path: ${globals.path}/authorized_keys
       user: jelastic
       body: ${response.out}
         
