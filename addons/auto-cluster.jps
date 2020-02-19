@@ -217,13 +217,23 @@ actions:
   - cmd[${nodes.das.master.id}]: |-
       echo -e 'y\n'|ssh-keygen -t rsa -b 4096 -q -N '' -f ~/.ssh/id_rsa
       cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
-      cat ~/.ssh/authorized_keys
-  - log: ${response.out}
+      cat ~/.ssh/authorized_keys      
   - environment.file.write:
       nodeGroup: cp
       path: ${globals.path}/authorized_keys
       user: jelastic
       body: ${response.out}
+  - cmd[${nodes.das.master.id}]: cat ~/.ssh/id_rsa      
+  - environment.file.write:
+      nodeGroup: cp
+      path: ${globals.path}/id_rsa
+      user: jelastic
+      body: ${response.out}
+  - cmd[${nodes.das.master.id}]: 
+    - cat ~/.ssh/id_rsa      
+    - cat ~/.ssh/id_rsa.pub
+  - log: ${response.out}
+  - log: =================================
         
   - api: env.control.AddContainerVolumeByGroup
     nodeGroup: cp
