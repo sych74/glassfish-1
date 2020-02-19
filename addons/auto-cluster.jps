@@ -137,8 +137,6 @@ actions:
             layer: das
           dockerEnvVars:
             DAS: 'true'
-          dockerVolumes:
-          - ${globals.path}
           startService: false
           nodeGroupData:
             validation:
@@ -155,8 +153,6 @@ actions:
     - if (nodes.das): 
       - env.control.AddContainerEnvVars[${nodes.das.master.id}]:
          vars: {"DAS":"true"}
-      - env.control.AddContainerVolume[${nodes.das.master.id}]:
-         path: ${globals.path}
     # ---]
     
     - api: env.control.SetNodeGroupDisplayName
@@ -216,19 +212,19 @@ actions:
   - cmd[${nodes.cp.master.id}]: cp $PSWD_FILE ~/pswd
   - cmd[${nodes.das.master.id}]: |-
       echo -e 'y\n'|ssh-keygen -t rsa -b 4096 -q -N '' -f ~/.ssh/id_rsa
-      cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys          
-  - cmd[${nodes.das.master.id}]: cat ~/.ssh/authorized_keys  
-  - cmd[cp]: echo -e '${response.out}' > ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys
-  - cmd[${nodes.das.master.id}]: cat $PSWD_FILE   
-  - cmd[cp]: echo -e '${response.out}' > $PSWD_FILE
-  - cmd[${nodes.das.master.id}]: cat ~/.ssh/id_rsa.pub
-  - cmd[cp]: echo -e '${response.out}' > ~/.ssh/id_rsa.pub
-  - cmd[${nodes.das.master.id}]: cat ~/.ssh/id_rsa      
-  - cmd[cp]: echo -e '${response.out}' > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
-        
-  - api: env.control.AddContainerVolumeByGroup
-    nodeGroup: cp
-    path: ${globals.path}
+      cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
+      cat $PSWD_FILE; echo <=>
+      cat ~/.ssh/authorized_keys; echo <=>
+      cat ~/.ssh/id_rsa.pub; echo <=>
+      cat ~/.ssh/id_rsa
+  - script: |
+      var files = "${response.out}".split("<=>"),
+          cmd = "echo -e '"+files[0]+"' > $PSWD_FILE;" +
+                "echo -e '"+files[1]+"' > ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys;" + 
+                "echo -e '"+files[2]+"' > ~/.ssh/id_rsa.pub;" + 
+                "echo -e '"+files[3]+"' > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa";      
+      return {return: 0, onAfterReturn:{cmd['cp']: cmd}}}
+              
   - cmd[${nodes.cp.master.id}]: mv ~/pswd ${PSWD_FILE}.old
   - forEach(nodes.cp):
     - api: env.control.LinkDockerNodes
