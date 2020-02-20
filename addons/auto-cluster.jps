@@ -156,7 +156,7 @@ actions:
       nodeGroup: cp
       displayName: Workers
 
-    - configureVolumesAndLinks:
+    - configureLinksAndKeys:
         redeploy: ${this.redeploy}
       
   restartRequired:
@@ -220,13 +220,13 @@ actions:
   uploadSSHKeys:          
     - cmd[${nodes.das.master.id}]: |-
         echo $PASS
+    - cmd[${this}]: |-
+        echo $DAS_PASS
     - cmd[${nodes.das.master.id}]: |-
         cat $PSWD_FILE | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:$PASS; echo -n ///
         cat ~/.ssh/authorized_keys | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:$PASS; echo -n ///
         cat ~/.ssh/id_rsa.pub | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:$PASS; echo -n ///
         cat ~/.ssh/id_rsa | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:$PASS       
-    - cmd[${this}]: |-
-        echo $DAS_PASS
     - script: |
         var files = out.split('///'), d = "' | openssl enc -base64 -d -aes-256-cbc -salt -pass pass:$DAS_PASS > ",
             cmd = "echo -e '" + files[0] + d + "$PSWD_FILE;" +
@@ -238,12 +238,12 @@ actions:
       out: ${response.out}
       ids: ${this}
 
-  configureVolumesAndLinks:  
+  configureLinksAndKeys:  
+    - linkContainers:
+        ids: ${nodes.cp.join(id,)}
     - cmd[${nodes.cp.master.id}]: mv $PSWD_FILE ${PSWD_FILE}.old
     - generateSSHKeys
     - uploadSSHKeys: ${nodes.cp.join(id,)}
-    - linkContainers:
-        ids: ${nodes.cp.join(id,)}
     - localhost:4848->das:4848:
         nodeId: ${nodes.das.master.id}
         dasNodeId: ${nodes.das.master.id}
