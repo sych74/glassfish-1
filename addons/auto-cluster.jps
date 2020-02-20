@@ -23,10 +23,9 @@ onInstall:
     - localhost:4848->das:4848:
         nodeId: ${nodes.das.master.id}
         dasNodeId: ${nodes.das.master.id}
-    - forEach(nodes.cp):
-      - exposePortsAndUpdateLink2Das: ${@i.id}
-      - if (${globals.payara}):
-          addHost2Hazelcast: ${@i.id}
+    - if (${globals.payara}):
+        addHost2Hazelcast: ${nodes.cp.join(id,)}
+    - exposePortsAndUpdateLink2Das: ${nodes.cp.join(id,)}
     - restartContainers[cp]
     - restartRequired
 
@@ -46,10 +45,9 @@ onBeforeServiceScaleOut[cp]:
         redeploy: true
       
 onBeforeScaleIn[cp]:
-  forEach(event.response.nodes):
-    - if (${globals.payara}):
-        removeHostFromHazelcast: ${@i.id}
-    - cmd[${@i.id}]: $STACK_PATH/service.sh delete
+  - if (${globals.payara}):
+      removeHostFromHazelcast: ${event.response.nodes.join(id,)}
+  - cmd[${event.response.nodes.join(id,)}]: $STACK_PATH/service.sh delete
   
 onAfterScaleOut[cp]:
   if (nodes.das): restartRequired
@@ -76,8 +74,7 @@ onAfterSetCloudletCount[das]:
   
 onAfterRedeployContainer[cp]:
   if (nodes.das):
-    forEach(event.response.responses):
-      addRedirect2DasAdmin: ${@i.nodeid}
+    addRedirect2DasAdmin: ${event.response.responses.join(nodeid,)} 
       
 onAfterMigrate:
   if (!nodes.das):
@@ -180,13 +177,19 @@ actions:
     user: root
     
   addHost2Hazelcast:
-    - script: |
-        var ids = "${this}".split(","), cmd = [];
-        for (var i = 0; i < ids.length; i++) cmd.push("$STACK_PATH/service.sh addHost node" + ids[i]); 
-        return {result: 0, onAfterReturn: {'cmd[das]': cmd.join(";")}}
+    editHazelcast:
+      ids: ${this}
+      act: add
   removeHostFromHazelcast:
-    cmd[das]: $STACK_PATH/service.sh removeHost node${this}
-    
+    editHazelcast:
+      ids: ${this}
+      act: remove
+  editHazelcast:
+    - script: |
+        var ids = "${this.ids}".split(","), cmd = [];
+        for (var i = 0; i < ids.length; i++) cmd.push("$STACK_PATH/service.sh ${this.act}Host node" + ids[i]); 
+        return {result: 0, onAfterReturn: {'cmd[das]': cmd.join("; ")}}
+      
   localhost:4848->das:4848:
     cmd[${this.nodeId}]: |-
       sed -i -e "s/http.*:\/\/.*:4848/https:\/\/node${this.dasNodeId}-${env.domain}:4848/g" ${STACK_PATH}/glassfish/domains/domain1/docroot/index.html
@@ -232,18 +235,26 @@ actions:
     - cmd[${nodes.cp.master.id}]: mv $PSWD_FILE ${PSWD_FILE}.old
     - generateSSHKeys
     - uploadSSHKeys: ${nodes.cp.join(id,)}
-    - forEach(nodes.cp):
-      - api: env.control.LinkDockerNodes
-        sourceNodeId: ${nodes.das.master.id}
-        targetNodeId: ${@i.id}
-        alias: das
-        groupAlias: das
-      - exposePortsAndUpdateLink2Das: ${@i.id}
-      - if (${globals.payara}):
-          addHost2Hazelcast: ${@i.id}
+    - script: |
+        var ids = "${this.ids}".split(","), api = [];        
+        for (var i = 0; i < ids.length; i++) 
+          api.push({
+            method: "env.control.LinkDockerNodes", 
+            params: {
+              sourceNodeId: ${nodes.das.master.id}, 
+              targetNodeId: ids[i], 
+              alias: "das", 
+              groupAlias: "das"
+            }
+          }); 
+        return {result: 0, onAfterReturn: {api: api}}        
+      ids: ${nodes.cp.join(id,)}
     - localhost:4848->das:4848:
         nodeId: ${nodes.das.master.id}
         dasNodeId: ${nodes.das.master.id}
+    - if (${globals.payara}):
+        addHost2Hazelcast: ${nodes.cp.join(id,)}
+    - exposePortsAndUpdateLink2Das: ${nodes.cp.join(id,)}
     - if (${this.redeploy}): copyConfigsAndApps
     - api: env.control.ExecDockerRunCmd
       nodeId: ${nodes.das.master.id}
