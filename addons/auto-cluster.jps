@@ -12,7 +12,8 @@ globals:
   
 nodeGroupAlias:
   ${targetNodes.nodeGroup}: cp
- 
+    
+    
 onInstall:
   - if ('${nodes.cp.master.nodeType}'.indexOf('payara') > -1):
       setGlobals:
@@ -235,20 +236,8 @@ actions:
     - cmd[${nodes.cp.master.id}]: mv $PSWD_FILE ${PSWD_FILE}.old
     - generateSSHKeys
     - uploadSSHKeys: ${nodes.cp.join(id,)}
-    - script: |
-        var ids = ids.split(","), api = [];        
-        for (var i = 0; i < ids.length; i++) 
-          api.push({
-            method: "env.control.LinkDockerNodes", 
-            params: {
-              sourceNodeId: ${nodes.das.master.id}, 
-              targetNodeId: ids[i], 
-              alias: "das", 
-              groupAlias: "das"
-            }
-          }); 
-        return {result: 0, onAfterReturn: {api: api}}        
-      ids: ${nodes.cp.join(id,)}
+    - linkContainers:
+        ids: ${nodes.cp.join(id,)}
     - localhost:4848->das:4848:
         nodeId: ${nodes.das.master.id}
         dasNodeId: ${nodes.das.master.id}
@@ -261,3 +250,19 @@ actions:
     - if (${this.redeploy}): redeployApps  
     - restartContainers[cp]
     - restartRequired
+    
+  linkContainers:     
+    script: |
+      var ids = "${this.ids}".split(","), api = [];        
+      for (var i = 0; i < ids.length; i++) 
+        api.push({
+          method: "env.control.LinkDockerNodes", 
+          params: {
+            sourceNodeId: ${nodes.das.master.id}, 
+            targetNodeId: ids[i], 
+            alias: "das", 
+            groupAlias: "das"
+          }
+        }); 
+      return {result: 0, api:api}        
+    
