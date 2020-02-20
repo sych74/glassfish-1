@@ -9,10 +9,11 @@ description: 'Auto-clustering: transforming standalone nodes to cluster'
 globals:
   port: 28080
   payara: false
+  path: /home/jelastic/.ssh
+  pass: ${fn.password}
   
 nodeGroupAlias:
   ${targetNodes.nodeGroup}: cp
-    
     
 onInstall:
   - if ('${nodes.cp.master.nodeType}'.indexOf('payara') > -1):
@@ -27,7 +28,7 @@ onInstall:
     - if (${globals.payara}):
         addHost2Hazelcast: ${nodes.cp.join(id,)}
     - exposePortsAndUpdateLink2Das: ${nodes.cp.join(id,)}
-    - restartContainers[cp]
+    - restartContainers[${nodes.cp.join(id,)}]
     - restartRequired
 
   - if (!nodes.das || (nodes.das && !${settings.clone:false})):
@@ -217,15 +218,18 @@ actions:
       echo -e 'y\n'|ssh-keygen -t rsa -b 4096 -q -N '' -f ~/.ssh/id_rsa
       cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
     
-  uploadSSHKeys:
+  uploadSSHKeys:          
     - cmd[${nodes.das.master.id}]: |-
-        cat $PSWD_FILE; echo ///; cat ~/.ssh/authorized_keys; echo ///; cat ~/.ssh/id_rsa.pub; echo ///; cat ~/.ssh/id_rsa
+        cat $PSWD_FILE | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:${globals.pass}; echo -n ///
+        cat ~/.ssh/authorized_keys | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:${globals.pass}; echo -n ///
+        cat ~/.ssh/id_rsa.pub | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:${globals.pass}; echo -n ///
+        cat ~/.ssh/id_rsa | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:${globals.pass}        
     - script: |
-        var files = out.split('///'),
-            cmd = "echo -e '" + files[0] + "' > $PSWD_FILE;" +
-                  "echo -e '" + files[1] + "' > ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys;" + 
-                  "echo -e '" + files[2] + "' > ~/.ssh/id_rsa.pub;" + 
-                  "echo -e '" + files[3] + "' > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa",
+        var files = out.split('///'), d = " | openssl enc -base64 -d -aes-256-cbc -salt -pass pass:${globals.pass}' > ",
+            cmd = "echo -e '" + files[0] + d + "$PSWD_FILE;" +
+                  "echo -e '" + files[1] + d + "~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys;" + 
+                  "echo -e '" + files[2] + d + "~/.ssh/id_rsa.pub;" + 
+                  "echo -e '" + files[3] + d + "~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa",
             action = {}; action['cmd[' + ids + ']'] = cmd;
                 
         return {result:0, onAfterReturn:action}
@@ -248,7 +252,7 @@ actions:
     - api: env.control.ExecDockerRunCmd
       nodeId: ${nodes.das.master.id}
     - if (${this.redeploy}): redeployApps  
-    - restartContainers[cp]
+    - restartContainers[${nodes.cp.join(id,)}]
     - restartRequired
     
   linkContainers:     
