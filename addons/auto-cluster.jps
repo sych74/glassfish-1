@@ -10,7 +10,6 @@ globals:
   port: 28080
   payara: false
   path: /home/jelastic/.ssh
-  pass: ${fn.password}
   
 nodeGroupAlias:
   ${targetNodes.nodeGroup}: cp
@@ -150,7 +149,7 @@ actions:
     #for 5.8.1+ [---
     - if (nodes.das): 
       - env.control.AddContainerEnvVars[${nodes.das.master.id}]:
-         vars: {"DAS":"true"}
+         vars: {"DAS":"true", "PASS":"${fn.password}"}
     # ---]
     
     - api: env.control.SetNodeGroupDisplayName
@@ -220,18 +219,17 @@ actions:
     
   uploadSSHKeys:          
     - cmd[${nodes.das.master.id}]: |-
-        cat $PSWD_FILE | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:${globals.pass}; echo -n ///
-        cat ~/.ssh/authorized_keys | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:${globals.pass}; echo -n ///
-        cat ~/.ssh/id_rsa.pub | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:${globals.pass}; echo -n ///
-        cat ~/.ssh/id_rsa | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:${globals.pass}        
+        cat $PSWD_FILE | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:${DAS_PASS:-$PASS}; echo -n ///
+        cat ~/.ssh/authorized_keys | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:${DAS_PASS:-$PASS}; echo -n ///
+        cat ~/.ssh/id_rsa.pub | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:${DAS_PASS:-$PASS}; echo -n ///
+        cat ~/.ssh/id_rsa | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:${DAS_PASS:-$PASS}       
     - script: |
-        var files = out.split('///'), d = "' | openssl enc -base64 -d -aes-256-cbc -salt -pass pass:${globals.pass} > ",
+        var files = out.split('///'), d = "' | openssl enc -base64 -d -aes-256-cbc -salt -pass pass:${DAS_PASS:-$PASS} > ",
             cmd = "echo -e '" + files[0] + d + "$PSWD_FILE;" +
                   "echo -e '" + files[1] + d + "~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys;" + 
                   "echo -e '" + files[2] + d + "~/.ssh/id_rsa.pub;" + 
                   "echo -e '" + files[3] + d + "~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa",
             action = {}; action['cmd[' + ids + ']'] = cmd;
-                
         return {result:0, onAfterReturn:action}
       out: ${response.out}
       ids: ${this}
@@ -268,5 +266,5 @@ actions:
             groupAlias: "das"
           }
         }); 
-      return {result: 0, api:api}        
+      return {result: 0, onAfterReturn: {api:api}}        
     
