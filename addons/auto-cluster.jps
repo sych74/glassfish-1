@@ -219,20 +219,16 @@ actions:
     
   uploadSSHKeys:          
     - cmd[${nodes.das.master.id}]: |-
-        echo $PASS
-    - cmd[${this}]: |-
-        echo $DAS_PASS
-    - cmd[${nodes.das.master.id}]: |-
         cat $PSWD_FILE | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:$PASS; echo -n ///
         cat ~/.ssh/authorized_keys | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:$PASS; echo -n ///
         cat ~/.ssh/id_rsa.pub | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:$PASS; echo -n ///
         cat ~/.ssh/id_rsa | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:$PASS       
     - script: |
-        var files = out.split('///'), d = "' | openssl enc -base64 -d -aes-256-cbc -salt -pass pass:$DAS_PASS > ",
-            cmd = "echo -e '" + files[0] + d + "$PSWD_FILE;" +
-                  "echo -e '" + files[1] + d + "~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys;" + 
-                  "echo -e '" + files[2] + d + "~/.ssh/id_rsa.pub;" + 
-                  "echo -e '" + files[3] + d + "~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa",
+        var f = out.split('///'), d = "echo -e '$f' | openssl enc -base64 -d -aes-256-cbc -salt -pass pass:$DAS_PASS > ",
+            cmd = d.replace("$f", f[0]) + "$PSWD_FILE;" +
+                  d.replace("$f", f[1]) + "~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys;" + 
+                  d.replace("$f", f[2]) + "~/.ssh/id_rsa.pub;" + 
+                  d.replace("$f", f[3]) + "~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa",
             action = {}; action['cmd[' + ids + ']'] = cmd;
         return {result:0, onAfterReturn:action}
       out: ${response.out}
