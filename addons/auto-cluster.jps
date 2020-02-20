@@ -219,13 +219,16 @@ actions:
     
   uploadSSHKeys:          
     - cmd[${nodes.das.master.id}]: |-
-        PASS=123
+        echo $PASS
+    - cmd[${nodes.das.master.id}]: |-
         cat $PSWD_FILE | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:$PASS; echo -n ///
         cat ~/.ssh/authorized_keys | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:$PASS; echo -n ///
         cat ~/.ssh/id_rsa.pub | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:$PASS; echo -n ///
         cat ~/.ssh/id_rsa | openssl enc -base64 -e -aes-256-cbc -salt -pass pass:$PASS       
+    - cmd[${this}]: |-
+        echo $DAS_PASS
     - script: |
-        var files = out.split('///'), d = "' | openssl enc -base64 -d -aes-256-cbc -salt -pass pass:123 > ",
+        var files = out.split('///'), d = "' | openssl enc -base64 -d -aes-256-cbc -salt -pass pass:$DAS_PASS > ",
             cmd = "echo -e '" + files[0] + d + "$PSWD_FILE;" +
                   "echo -e '" + files[1] + d + "~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys;" + 
                   "echo -e '" + files[2] + d + "~/.ssh/id_rsa.pub;" + 
