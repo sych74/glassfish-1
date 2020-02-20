@@ -236,7 +236,7 @@ actions:
     - generateSSHKeys
     - uploadSSHKeys: ${nodes.cp.join(id,)}
     - script: |
-        var ids = "${this.ids}".split(","), api = [];        
+        var ids = ids.split(","), api = [];        
         for (var i = 0; i < ids.length; i++) 
           api.push({
             method: "env.control.LinkDockerNodes", 
