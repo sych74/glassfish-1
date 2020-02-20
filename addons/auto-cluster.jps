@@ -38,11 +38,8 @@ onBeforeServiceScaleOut[cp]:
   - if (nodes.das):
       - uploadSSHKeys: ${event.response.nodes.join(id,)}
       - if (${globals.payara}):
-        - forEach(event.response.nodes):
-            setGlobals: 
-              addHzlctNodes: $STACK_PATH/service.sh addHost node${@i.id}; ${globals.addHzlctNodes:}
-        - cmd[das]: ${globals.addHzlctNodes}       
-        - exposePortsAndUpdateLink2Das: ${event.response.nodes.join(id,)}
+          addHost2Hazelcast: ${event.response.nodes.join(id,)}
+      - exposePortsAndUpdateLink2Das: ${event.response.nodes.join(id,)}
         
   - if (!nodes.das && nodes.cp.length > 1):
       buildCluster:
@@ -183,7 +180,10 @@ actions:
     user: root
     
   addHost2Hazelcast:
-    cmd[das]: $STACK_PATH/service.sh addHost node${this}
+    - script: |
+        var ids = "${this}".split(","), cmd = [];
+        for (var i = 0; i < ids.length; i++) cmd.push("$STACK_PATH/service.sh addHost node" + ids[i]); 
+        return {result: 0, onAfterReturn: {'cmd[das]': cmd.join(";")}}
   removeHostFromHazelcast:
     cmd[das]: $STACK_PATH/service.sh removeHost node${this}
     
