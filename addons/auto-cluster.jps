@@ -41,7 +41,8 @@ onBeforeServiceScaleOut[cp]:
         - if (${globals.payara}):
             addHost2Hazelcast: ${@i.id}
         - exposePortsAndUpdateLink2Das: ${@i.id}
-        - restartContainers[${@i.id}]
+        #seems like unnecessary restart 
+        #- restartContainers[${@i.id}]
   - if (!nodes.das && nodes.cp.length > 1):
       buildCluster:
         redeploy: true
@@ -192,11 +193,11 @@ actions:
       [ -n "$file" ] && { sed -i -e "s/http.*:\/\/.*:4848/https:\/\/node${this.dasNodeId}-${env.domain}:4848/g" $file; } || ':'
       
   exposePortsAndUpdateLink2Das:
-  - exposePorts: ${this}
-  - localhost:4848->das:4848:
-      nodeId: ${this}
-      dasNodeId: ${nodes.das.master.id}
-  - addRedirect2DasAdmin: ${this}
+    - exposePorts: ${this}
+    - localhost:4848->das:4848:
+        nodeId: ${this}
+        dasNodeId: ${nodes.das.master.id}
+    - addRedirect2DasAdmin: ${this}
   
   addRedirect2DasAdmin:
     cmd[${this}]: |-
