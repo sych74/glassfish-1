@@ -49,9 +49,9 @@ onBeforeServiceScaleOut[cp]:
       
 onBeforeScaleIn[cp]:
   forEach(event.response.nodes):
-  - if (${globals.payara}):
-      removeHostFromHazelcast: ${@i.id}
-  - cmd[${@i.id}]: $STACK_PATH/service.sh delete
+    - if (${globals.payara}):
+        removeHostFromHazelcast: ${@i.id}
+    - cmd[${@i.id}]: $STACK_PATH/service.sh delete
   
 onAfterScaleOut[cp]:
   if (nodes.das): restartRequired
