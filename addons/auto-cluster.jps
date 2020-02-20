@@ -12,7 +12,7 @@ globals:
   
 nodeGroupAlias:
   ${targetNodes.nodeGroup}: cp
-   
+ 
 onInstall:
   - if ('${nodes.cp.master.nodeType}'.indexOf('payara') > -1):
       setGlobals:
@@ -37,10 +37,13 @@ onInstall:
 onBeforeServiceScaleOut[cp]:
   - if (nodes.das):
       - uploadSSHKeys: ${event.response.nodes.join(id,)}
-      - forEach(event.response.nodes):
-          - if (${globals.payara}):
-              addHost2Hazelcast: ${@i.id}
-          - exposePortsAndUpdateLink2Das: ${@i.id}
+      - if (${globals.payara}):
+        - forEach(event.response.nodes):
+            setGlobals: 
+              addHzlctNodes: $STACK_PATH/service.sh addHost node${@i.id}; ${globals.addHzlctNodes:}
+        - cmd[das]: ${globals.addHzlctNodes}       
+        - exposePortsAndUpdateLink2Das: ${event.response.nodes.join(id,)}
+        
   - if (!nodes.das && nodes.cp.length > 1):
       buildCluster:
         redeploy: true
