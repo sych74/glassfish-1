@@ -36,13 +36,11 @@ onInstall:
         
 onBeforeServiceScaleOut[cp]:
   - if (nodes.das):
-      forEach(event.response.nodes):
-        - uploadSSHKeys: ${@i.id}
-        - if (${globals.payara}):
-            addHost2Hazelcast: ${@i.id}
-        - exposePortsAndUpdateLink2Das: ${@i.id}
-        #seems like unnecessary restart 
-        #- restartContainers[${@i.id}]
+      - uploadSSHKeys: ${event.response.nodes.join(id,)}
+      - forEach(event.response.nodes):
+          - if (${globals.payara}):
+              addHost2Hazelcast: ${@i.id}
+          - exposePortsAndUpdateLink2Das: ${@i.id}
   - if (!nodes.das && nodes.cp.length > 1):
       buildCluster:
         redeploy: true
@@ -230,7 +228,7 @@ actions:
   configureVolumesAndLinks:  
     - cmd[${nodes.cp.master.id}]: mv $PSWD_FILE ${PSWD_FILE}.old
     - generateSSHKeys
-    - uploadSSHKeys: cp
+    - uploadSSHKeys: ${nodes.cp.join(id,)}
     - forEach(nodes.cp):
       - api: env.control.LinkDockerNodes
         sourceNodeId: ${nodes.das.master.id}
