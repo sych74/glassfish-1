@@ -19,18 +19,21 @@ onInstall:
       setGlobals:
         payara: true
 
-  - if (nodes.das && ${settings.clone:false}):
-    - cleanCluster
-    - localhost:4848->das:4848:
-        nodeId: ${nodes.das.master.id}
-        dasNodeId: ${nodes.das.master.id}
-    - if (${globals.payara}):
-        addHost2Hazelcast: ${nodes.cp.join(id,)}
-    - exposePortsAndUpdateLink2Das: ${nodes.cp.join(id,)}
-    - restartContainers[${nodes.cp.join(id,)}]
-    - restartRequired
-
-  - if (!nodes.das || (nodes.das && !${settings.clone:false})):
+  - if (nodes.das): 
+    - if (${settings.clone:false}):
+      - cleanCluster
+      - localhost:4848->das:4848:
+          nodeId: ${nodes.das.master.id}
+          dasNodeId: ${nodes.das.master.id}
+      - if (${globals.payara}):
+          addHost2Hazelcast: ${nodes.cp.join(id,)}
+      - exposePortsAndUpdateLink2Das: ${nodes.cp.join(id,)}
+      - restartContainers[${nodes.cp.join(id,)}]
+      - restartRequired      
+    - else: 
+        buildCluster:
+          redeploy: false        
+  - else:
       buildCluster:
         redeploy: false        
         
@@ -41,7 +44,7 @@ onBeforeServiceScaleOut[cp]:
           addHost2Hazelcast: ${event.response.nodes.join(id,)}
       - exposePortsAndUpdateLink2Das: ${event.response.nodes.join(id,)}
         
-  - if (!nodes.das && nodes.cp.length > 1):
+  - elif (nodes.cp.length > 1):
       buildCluster:
         redeploy: true
       
@@ -78,25 +81,25 @@ onAfterRedeployContainer[cp]:
     addRedirect2DasAdmin: ${event.response.responses.join(nodeid,)} 
       
 onAfterMigrate:
-  if (!nodes.das):
-    localhost:4848->das:4848:
-      nodeId: ${nodes.cp.master.id}
-      dasNodeId: ${nodes.cp.master.id}
-  if (nodes.das):
-    - localhost:4848->das:4848:
-        nodeId: ${nodes.das.master.id}
-        dasNodeId: ${nodes.das.master.id}
-    - localhost:4848->das:4848:
-        nodeId: cp
-        dasNodeId: ${nodes.das.master.id}      
-    - addRedirect2DasAdmin: cp
+  - if (nodes.das):
+      - localhost:4848->das:4848:
+          nodeId: ${nodes.das.master.id}
+          dasNodeId: ${nodes.das.master.id}
+      - localhost:4848->das:4848:
+          nodeId: cp
+          dasNodeId: ${nodes.das.master.id}      
+      - addRedirect2DasAdmin: cp
+  - else:
+      localhost:4848->das:4848:
+        nodeId: ${nodes.cp.master.id}
+        dasNodeId: ${nodes.cp.master.id}
 
 onAfterBindSSL:
-  - if ( nodes.cp.length = 1):
+  - if (nodes.cp.length = 1):
     - log: after bind SSL
-    - cmd[${nodes.das.master.id}]:
-      - mkdir -p /var/lib/jelastic/SSL/
-      - chown $STACK_USER:$STACK_USER -R /var/lib/jelastic/SSL/
+    - cmd[${nodes.das.master.id}]: |-
+        mkdir -p /var/lib/jelastic/SSL/
+        chown $STACK_USER:$STACK_USER -R /var/lib/jelastic/SSL/
       user: root
     - environment.file.write:
         nodeid: ${nodes.das.master.id}
@@ -106,12 +109,11 @@ onAfterBindSSL:
           key=${event.params.cert_key}
           intermediate=${event.params.intermediate}
           cert=${event.params.cert}
-    - cmd[${nodes.das.master.id}]:
-      - jem ssl install
+    - cmd[${nodes.das.master.id}]: jem ssl install
       user: root
 
 onAfterRemoveSSL:
-  - if ( nodes.cp.length = 1):
+  - if (nodes.cp.length = 1):
     - cmd[${nodes.das.master.id}]:
       - jem ssl remove
       user: root
@@ -121,7 +123,12 @@ actions:
     cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh clean
     
   buildCluster:
-    - if (!nodes.das):
+    #for 5.8.1+ [---
+    - if (nodes.das): 
+        env.control.AddContainerEnvVars[${nodes.das.master.id}]:
+          vars: {"DAS":"true", "PASS":"${fn.password}"}
+    # ---]
+    - else: 
       #for < 5.8.1 [---
       - addNodes:
           fixedCloudlets: ${nodes.cp.master.fixedCloudlets}
@@ -145,11 +152,6 @@ actions:
       - api: env.control.SetNodeGroupDisplayName
         nodeGroup: das
         displayName: DAS
-    # ---]
-    #for 5.8.1+ [---
-    - if (nodes.das): 
-      - env.control.AddContainerEnvVars[${nodes.das.master.id}]:
-         vars: {"DAS":"true", "PASS":"${fn.password}"}
     # ---]
     
     - api: env.control.SetNodeGroupDisplayName
