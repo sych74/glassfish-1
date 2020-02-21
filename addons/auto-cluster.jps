@@ -22,12 +22,12 @@ onInstall:
   - if (nodes.das): 
     - if (${settings.clone:false}):
       - cleanCluster
-      - localhost:4848->das:4848:
+      - replaceLocalhostByDas:
           nodeId: ${nodes.das.master.id}
           dasNodeId: ${nodes.das.master.id}
       - if (${globals.payara}):
           addHost2Hazelcast: ${nodes.cp.join(id,)}
-      - exposePortsAndUpdateLink2Das: ${nodes.cp.join(id,)}
+      - exposePortAndUpdateLink2Das: ${nodes.cp.join(id,)}
       - restartContainers[${nodes.cp.join(id,)}]
       - restartRequired      
     - else: 
@@ -42,7 +42,7 @@ onBeforeServiceScaleOut[cp]:
       - uploadSSHKeys: ${event.response.nodes.join(id,)}
       - if (${globals.payara}):
           addHost2Hazelcast: ${event.response.nodes.join(id,)}
-      - exposePortsAndUpdateLink2Das: ${event.response.nodes.join(id,)}
+      - exposePortAndUpdateLink2Das: ${event.response.nodes.join(id,)}
         
   - elif (nodes.cp.length > 1):
       buildCluster:
@@ -82,15 +82,14 @@ onAfterRedeployContainer[cp]:
       
 onAfterMigrate:
   - if (nodes.das):
-      - localhost:4848->das:4848:
+      - replaceLocalhostByDas:
           nodeId: ${nodes.das.master.id}
           dasNodeId: ${nodes.das.master.id}
-      - localhost:4848->das:4848:
-          nodeId: cp
-          dasNodeId: ${nodes.das.master.id}      
-      - addRedirect2Das: cp
+      - cmd[cp]: |-
+          $STACK_PATH/service.sh replaceLocalhostByDas "node${nodes.das.master.id}-${env.domain}:4848"
+          $STACK_PATH/service.sh addRedirect2Das "node${nodes.das.master.id}-${env.domain}:4848"
   - else:
-      localhost:4848->das:4848:
+      replaceLocalhostByDas:
         nodeId: ${nodes.cp.master.id}
         dasNodeId: ${nodes.cp.master.id}
 
@@ -168,15 +167,10 @@ actions:
     cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh redeploy
     
   copyConfigsAndApps:
-    - cmd[${nodes.cp.master.id}]: |-
-        path=$STACK_PATH/glassfish/domains/domain1
-        scp -o StrictHostKeyChecking=no $path/config/domain.xml jelastic@das:$path/config/domain.xml
-        scp -r $path/applications jelastic@das:$path
+    - cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh copyConfigsAndApps
       
-  exposePorts:
-    cmd[${this}]: |-
-      echo JELASTIC_EXPOSE=${globals.port} >> /.jelenv
-      iptables -t nat -I PREROUTING -p tcp -m tcp --dport 4848 -j REDIRECT --to-ports 24848
+  exposePort:
+    cmd[${this}]: $STACK_PATH/service.sh exposePort ${globals.port}
     user: root
     
   addHost2Hazelcast:
@@ -193,27 +187,20 @@ actions:
         for (var i = 0; i < ids.length; i++) cmd.push("$STACK_PATH/service.sh ${this.act}Host node" + ids[i]); 
         return {result: 0, onAfterReturn: {'cmd[das]': cmd.join("; ")}}
       
-  localhost:4848->das:4848:
-    cmd[${this.nodeId}]: |-
-      sed -i -e "s/http.*:\/\/.*:4848/https:\/\/node${this.dasNodeId}-${env.domain}:4848/g" ${STACK_PATH}/glassfish/domains/domain1/docroot/index.html
-      file=$(find ${STACK_PATH}/glassfish/nodes/*/*/docroot -type f -name index.html)
-      [ -n "$file" ] && { sed -i -e "s/http.*:\/\/.*:4848/https:\/\/node${this.dasNodeId}-${env.domain}:4848/g" $file; } || ':'
+  replaceLocalhostByDas:
+    cmd[${this.nodeId}]: $STACK_PATH/service.sh replaceLocalhostByDas "node${this.dasNodeId}-${env.domain}:4848"
       
-  exposePortsAndUpdateLink2Das:
-    - exposePorts: ${this}
-    - localhost:4848->das:4848:
-        nodeId: ${this}
-        dasNodeId: ${nodes.das.master.id}
-    - addRedirect2Das: ${this}
+  exposePortAndUpdateLink2Das:
+    - exposePort: ${this}
+    - cmd[${this.nodeId}]: |-
+        $STACK_PATH/service.sh replaceLocalhostByDas "node${this.dasNodeId}-${env.domain}:4848"
+        $STACK_PATH/service.sh addRedirect2Das "node${nodes.das.master.id}-${env.domain}:4848"
   
   addRedirect2Das:
-    cmd[${this}]: |-
-      $STACK_PATH/service.sh addRedirect2Das "node${nodes.das.master.id}-${env.domain}:4848"
+    cmd[${this}]: $STACK_PATH/service.sh addRedirect2Das "node${nodes.das.master.id}-${env.domain}:4848"
 
   generateSSHKeys: 
-    cmd[${nodes.das.master.id}]: |-
-      echo -e 'y\n'|ssh-keygen -t rsa -b 4096 -q -N '' -f ~/.ssh/id_rsa
-      cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
+    cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh generateKeys
     
   uploadSSHKeys:          
     - cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh getEncFiles
@@ -230,12 +217,12 @@ actions:
     - cmd[${nodes.cp.master.id}]: mv $PSWD_FILE ${PSWD_FILE}.old
     - generateSSHKeys
     - uploadSSHKeys: ${nodes.cp.join(id,)}
-    - localhost:4848->das:4848:
+    - replaceLocalhostByDas:
         nodeId: ${nodes.das.master.id}
         dasNodeId: ${nodes.das.master.id}
     - if (${globals.payara}):
         addHost2Hazelcast: ${nodes.cp.join(id,)}
-    - exposePortsAndUpdateLink2Das: ${nodes.cp.join(id,)}
+    - exposePortAndUpdateLink2Das: ${nodes.cp.join(id,)}
     - if (${this.redeploy}): copyConfigsAndApps
     - api: env.control.ExecDockerRunCmd
       nodeId: ${nodes.das.master.id}
