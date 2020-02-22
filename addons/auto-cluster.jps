@@ -22,7 +22,6 @@ onInstall:
   - if (nodes.das): 
     - if (${settings.clone:false}):
       - cleanCluster
-      - replaceLocalhostByDas@Das
       - if (${globals.payara}):
           addHost2Hazelcast: ${nodes.cp.join(id,)}
       - exposePortAndUpdateLink2Das: ${nodes.cp.join(id,)}
@@ -80,10 +79,7 @@ onAfterRedeployContainer[cp]:
       
 onAfterMigrate:
   - cmd[cp]: |-
-      $STACK_PATH/service.sh replaceLocalhostByDas "node${nodes.das.master.id}-${env.domain}:4848"
       $STACK_PATH/service.sh addRedirect2Das "node${nodes.das.master.id}-${env.domain}:4848"
-  - if (nodes.das):
-      - replaceLocalhostByDas@Das
 
 onAfterBindSSL:
   - if (nodes.cp.length == 1):
@@ -179,13 +175,9 @@ actions:
         for (var i = 0; i < ids.length; i++) cmd.push("$STACK_PATH/service.sh ${this.act}Host node" + ids[i]); 
         return {result: 0, onAfterReturn: {'cmd[das]': cmd.join("; ")}}
       
-  replaceLocalhostByDas@Das:
-    cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh replaceLocalhostByDas "node${nodes.das.master.id}-${env.domain}:4848"
-      
   exposePortAndUpdateLink2Das:
     - exposePort: ${this}
     - cmd[${this}]: |-
-        $STACK_PATH/service.sh replaceLocalhostByDas "node${nodes.das.master.id}-${env.domain}:4848"
         $STACK_PATH/service.sh addRedirect2Das "node${nodes.das.master.id}-${env.domain}:4848"
   
   addRedirect2Das:
@@ -209,7 +201,6 @@ actions:
     - cmd[${nodes.cp.master.id}]: mv $PSWD_FILE ${PSWD_FILE}.old
     - generateSSHKeys
     - uploadSSHKeys: ${nodes.cp.join(id,)}
-    - replaceLocalhostByDas@Das
     - if (${globals.payara}):
         addHost2Hazelcast: ${nodes.cp.join(id,)}
     - exposePortAndUpdateLink2Das: ${nodes.cp.join(id,)}
