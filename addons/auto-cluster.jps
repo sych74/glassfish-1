@@ -86,7 +86,7 @@ onAfterMigrate:
       - replaceLocalhostByDas@Das
 
 onAfterBindSSL:
-  - if (nodes.cp.length = 1):
+  - if (nodes.cp.length == 1):
     - log: after bind SSL
     - cmd[${nodes.das.master.id}]: |-
         mkdir -p /var/lib/jelastic/SSL/
@@ -104,7 +104,7 @@ onAfterBindSSL:
       user: root
 
 onAfterRemoveSSL:
-  - if (nodes.cp.length = 1):
+  - if (nodes.cp.length == 1):
     - cmd[${nodes.das.master.id}]:
       - jem ssl remove
       user: root
