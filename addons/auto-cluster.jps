@@ -198,7 +198,7 @@ actions:
     - cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh getEncFiles
     - script: |
         var f = out.split('///'), action = {}; 
-        action['cmd[' + ids + ']'] = "$STACK_PATH/service.sh setEncFiles '" + f[0] + "' '" + f[1] + "' '" + f[2] + "' '" + f[3] + "'";
+        action['cmd[' + ids + ']'] = ("$STACK_PATH/service.sh setEncFiles '" + f[0] + "' '" + f[1] + "' '" + f[2] + "' '" + f[3] + "'").replace(/\n/g, "\\n");
         return {result:0, onAfterReturn:action}
       out: ${response.out}
       ids: ${this}
