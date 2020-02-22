@@ -184,7 +184,7 @@ actions:
       
   exposePortAndUpdateLink2Das:
     - exposePort: ${this}
-    - cmd[${this.nodeId}]: |-
+    - cmd[${this}]: |-
         $STACK_PATH/service.sh replaceLocalhostByDas "node${this.dasNodeId}-${env.domain}:4848"
         $STACK_PATH/service.sh addRedirect2Das "node${nodes.das.master.id}-${env.domain}:4848"
   
@@ -233,5 +233,4 @@ actions:
             groupAlias: "das"
           }
         }); 
-      return {result: 0, onAfterReturn: {api:api}}        
-    
+      return {result: 0, onAfterReturn: {api:api}}   
