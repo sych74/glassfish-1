@@ -24,7 +24,7 @@ onInstall:
       - cleanCluster
       - if (${globals.payara}):
           addHost2Hazelcast: ${nodes.cp.join(id,)}
-      - exposePortAndUpdateLink2Das: ${nodes.cp.join(id,)}
+      - exposePort: ${nodes.cp.join(id,)}
       - restartContainers[${nodes.cp.join(id,)}]
       - restartRequired      
     - else: 
@@ -39,7 +39,7 @@ onBeforeServiceScaleOut[cp]:
       - uploadSSHKeys: ${event.response.nodes.join(id,)}
       - if (${globals.payara}):
           addHost2Hazelcast: ${event.response.nodes.join(id,)}
-      - exposePortAndUpdateLink2Das: ${event.response.nodes.join(id,)}
+      - exposePort: ${event.response.nodes.join(id,)}
         
   - elif (nodes.cp.length > 1):
       buildCluster:
@@ -72,11 +72,7 @@ onAfterSetCloudletCount[cp]:
     
 onAfterSetCloudletCount[das]:
   cmd[das]: $STACK_PATH/service.sh restart
-  
-onAfterRedeployContainer[cp]:
-  if (nodes.das):
-    addRedirect2Das: ${event.response.responses.join(nodeid,)} 
-      
+        
 onAfterMigrate:
   - cmd[cp]: |-
       $STACK_PATH/service.sh addRedirect2Das "node${nodes.das.master.id}-${env.domain}:4848"
@@ -175,14 +171,6 @@ actions:
         for (var i = 0; i < ids.length; i++) cmd.push("$STACK_PATH/service.sh ${this.act}Host node" + ids[i]); 
         return {result: 0, onAfterReturn: {'cmd[das]': cmd.join("; ")}}
       
-  exposePortAndUpdateLink2Das:
-    - exposePort: ${this}
-    - cmd[${this}]: |-
-        $STACK_PATH/service.sh addRedirect2Das "node${nodes.das.master.id}-${env.domain}:4848"
-  
-  addRedirect2Das:
-    cmd[${this}]: $STACK_PATH/service.sh addRedirect2Das "node${nodes.das.master.id}-${env.domain}:4848"
-
   generateSSHKeys: 
     cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh generateKeys
     
@@ -203,7 +191,7 @@ actions:
     - uploadSSHKeys: ${nodes.cp.join(id,)}
     - if (${globals.payara}):
         addHost2Hazelcast: ${nodes.cp.join(id,)}
-    - exposePortAndUpdateLink2Das: ${nodes.cp.join(id,)}
+    - exposePort: ${nodes.cp.join(id,)}
     - if (${this.redeploy}): copyConfigsAndApps
     - api: env.control.ExecDockerRunCmd
       nodeId: ${nodes.das.master.id}
