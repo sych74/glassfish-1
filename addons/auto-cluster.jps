@@ -36,7 +36,8 @@ onInstall:
         
 onBeforeServiceScaleOut[cp]:
   - if (nodes.das):
-      - uploadSSHKeys: ${event.response.nodes.join(id,)}
+      - uploadEncFiles: 
+          ids: ${event.response.nodes.join(id,)}
       - if (${globals.payara}):
           addHost2Hazelcast: ${event.response.nodes.join(id,)}
       - exposePort: ${event.response.nodes.join(id,)}
@@ -77,6 +78,11 @@ onAfterMigrate:
   - cmd[cp]: |-
       $STACK_PATH/service.sh addRedirect2Das "node${nodes.das.master.id}-${env.domain}:4848"
 
+onAfterResetNodePassword:
+  uploadEncFiles: 
+    ids: ${nodes.cp.join(id,)}
+    mode: pswd
+  
 onAfterBindSSL:
   - if (nodes.cp.length == 1):
     - log: after bind SSL
@@ -174,21 +180,22 @@ actions:
   generateSSHKeys: 
     cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh generateKeys
     
-  uploadSSHKeys:          
-    - cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh getEncFiles
+  uploadEncFiles:          
+    - cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh getEncFiles ${this.mode:}
     - script: |
         var f = out.split('///'), action = {}; 
-        action['cmd[' + ids + ']'] = ("$STACK_PATH/service.sh setEncFiles '" + f[0] + "' '" + f[1] + "' '" + f[2] + "' '" + f[3] + "'").replace(/\n/g, "\\n");
+        action['cmd[' + ids + ']'] = ("$STACK_PATH/service.sh setEncFiles '" + f[0] + (f.length > 1 ? ("' '" + f[1] + "' '" + f[2] + "' '" + f[3])  : "") + "'").replace(/\n/g, "\\n");
         return {result:0, onAfterReturn:action}
       out: ${response.out}
-      ids: ${this}
+      ids: ${this.ids}
 
   configureLinksAndKeys:  
     - linkContainers:
         ids: ${nodes.cp.join(id,)}
     - cmd[${nodes.cp.master.id}]: mv $PSWD_FILE ${PSWD_FILE}.old
     - generateSSHKeys
-    - uploadSSHKeys: ${nodes.cp.join(id,)}
+    - uploadEncFiles: 
+        ids: ${nodes.cp.join(id,)}
     - if (${globals.payara}):
         addHost2Hazelcast: ${nodes.cp.join(id,)}
     - exposePort: ${nodes.cp.join(id,)}
