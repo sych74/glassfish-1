@@ -28,12 +28,11 @@ onInstall:
       - restartContainers[${nodes.cp.join(id,)}]
       - restartRequired      
     - else: 
-        buildCluster:
-          redeploy: false        
-  - else:
-      buildCluster:
-        redeploy: false        
+        buildCluster
         
+  - else:
+      buildCluster
+      
 onBeforeServiceScaleOut[cp]:
   - if (nodes.das):
       - uploadEncFiles: 
@@ -41,10 +40,9 @@ onBeforeServiceScaleOut[cp]:
       - if (${globals.payara}):
           addHost2Hazelcast: ${event.response.nodes.join(id,)}
       - exposePort: ${event.response.nodes.join(id,)}
-        
+  #for < 5.8.1 [---
   - elif (nodes.cp.length > 1):
-      buildCluster:
-        redeploy: true
+      buildCluster
       
 onBeforeScaleIn[cp]:
   - if (${globals.payara}):
@@ -147,8 +145,7 @@ actions:
       nodeGroup: cp
       displayName: Workers
 
-    - configureLinksAndKeys:
-        redeploy: ${this.redeploy}
+    - configureLinksAndKeys
       
   restartRequired:
     cmd[das]: $STACK_PATH/service.sh restartRequired
@@ -199,10 +196,10 @@ actions:
     - if (${globals.payara}):
         addHost2Hazelcast: ${nodes.cp.join(id,)}
     - exposePort: ${nodes.cp.join(id,)}
-    - if (${this.redeploy}): copyConfigsAndApps
+    - copyConfigsAndApps
     - api: env.control.ExecDockerRunCmd
       nodeId: ${nodes.das.master.id}
-    - if (${this.redeploy}): redeployApps  
+    - redeployApps  
     - restartContainers[${nodes.cp.join(id,)}]
     - restartRequired
     
