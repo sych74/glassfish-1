@@ -10,10 +10,11 @@ globals:
   port: 28080
   payara: false
   path: /home/jelastic/.ssh
+  pwdfile: /home/jelastic/.ssh/pwdfile
   
 nodeGroupAlias:
   ${targetNodes.nodeGroup}: cp
-    
+
 onInstall:
   - if ('${nodes.cp.master.nodeType}'.indexOf('payara') > -1):
       setGlobals:
@@ -189,8 +190,14 @@ actions:
   configureLinksAndKeys:  
     - linkContainers:
         ids: ${nodes.cp.join(id,)}
-    - cmd[${nodes.cp.master.id}]: mv $PSWD_FILE ${PSWD_FILE}.old
     - generateSSHKeys
+    - env.file.Read:
+        path: ${globals.pwdfile}
+        nodeId: ${nodes.das.master.id}
+    - env.file.Write:
+        path: ${globals.pwdfile}
+        nodeId: ${nodes.das.master.id}
+        body: ${response.body}
     - uploadEncFiles: 
         ids: ${nodes.cp.join(id,)}
     - if (${globals.payara}):
