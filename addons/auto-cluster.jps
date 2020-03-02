@@ -1,7 +1,6 @@
 ---
 type: update
 version: 1.6.1
-id: auto-cluster-addon
 name: Auto-Clustering
 logo: https://github.com/jelastic-jps/glassfish/raw/master/glassfish-cluster/img/glassfish-logo.png
 description: 'Auto-clustering: transforming standalone nodes to cluster'
