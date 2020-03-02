@@ -84,26 +84,14 @@ onAfterResetServicePassword[das]:
   
 onAfterBindSSL:
   - if (nodes.cp.length == 1):
-    - log: after bind SSL
-    - cmd[${nodes.das.master.id}]: |-
-        mkdir -p /var/lib/jelastic/SSL/
-        chown $STACK_USER:$STACK_USER -R /var/lib/jelastic/SSL/
-      user: root
-    - environment.file.write:
-        nodeid: ${nodes.das.master.id}
-        path: /var/lib/jelastic/SSL/customssl.conf
-        user: root
-        body: |
-          key=${event.params.cert_key}
-          intermediate=${event.params.intermediate}
-          cert=${event.params.cert}
-    - cmd[${nodes.das.master.id}]: jem ssl install
+    - cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh copySSL
+        $STACK_PATH/service.sh copySSL
+    - cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh installSSL
       user: root
 
 onAfterRemoveSSL:
   - if (nodes.cp.length == 1):
-    - cmd[${nodes.das.master.id}]:
-      - jem ssl remove
+    - cmd[${nodes.das.master.id}]: jem ssl remove
       user: root
   
 actions:
@@ -155,7 +143,11 @@ actions:
     cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh redeploy
     
   copyConfigsAndApps:
-    - cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh copyConfigsAndApps
+    - cmd[${nodes.cp.master.id}]: |-
+        $STACK_PATH/service.sh copyConfigsAndApps
+        $STACK_PATH/service.sh copySSL
+    - cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh installSSL
+      user: root    
       
   exposePort:
     cmd[${this}]: $STACK_PATH/service.sh exposePort ${globals.port}
