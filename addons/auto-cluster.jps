@@ -77,7 +77,7 @@ onAfterMigrate:
   - cmd[cp]: |-
       $STACK_PATH/service.sh addRedirect2Das "node${nodes.das.master.id}-${env.domain}:4848"
 
-onAfterResetNodePassword:
+onAfterResetServicePassword[das]:
   uploadEncFiles: 
     ids: ${nodes.cp.join(id,)}
     mode: pswd
