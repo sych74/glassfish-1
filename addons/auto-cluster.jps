@@ -193,7 +193,7 @@ actions:
     - generateSSHKeys
     - env.file.Read:
         path: ${globals.pwdfile}
-        nodeId: ${nodes.das.master.id}
+        nodeId: ${nodes.cp.master.id}
     - env.file.Write:
         path: ${globals.pwdfile}
         nodeId: ${nodes.das.master.id}
