@@ -84,9 +84,9 @@ onAfterResetServicePassword[das]:
 onAfterBindSSL:
   - if (nodes.cp.length == 1):
     - cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh copySSL
-        $STACK_PATH/service.sh copySSL
-    - cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh installSSL
-      user: root
+    - if (/^customssl\.conf.*successfully.*$/.test("${response.out}")):
+        cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh installSSL
+        user: root
 
 onAfterRemoveSSL:
   - if (nodes.cp.length == 1):
@@ -145,8 +145,9 @@ actions:
     - cmd[${nodes.cp.master.id}]: |-
         $STACK_PATH/service.sh copyConfigsAndApps
         $STACK_PATH/service.sh copySSL
-    - cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh installSSL
-      user: root    
+    - if (/^customssl\.conf.*successfully.*$/.test("${response.out}")):
+        cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh installSSL
+        user: root
       
   exposePort:
     cmd[${this}]: $STACK_PATH/service.sh exposePort ${globals.port}
