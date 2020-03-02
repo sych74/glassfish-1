@@ -10,7 +10,7 @@ globals:
   port: 28080
   payara: false
   path: /home/jelastic/.ssh
-  pwdfile: /home/jelastic/.ssh/pwdfile
+#  pwdfile: /home/jelastic/.ssh/pwdfile
   
 nodeGroupAlias:
   ${targetNodes.nodeGroup}: cp
@@ -191,13 +191,13 @@ actions:
     - linkContainers:
         ids: ${nodes.cp.join(id,)}
     - generateSSHKeys
-    - env.file.Read:
-        path: ${globals.pwdfile}
-        nodeId: ${nodes.cp.master.id}
-    - env.file.Write:
-        path: ${globals.pwdfile}
-        nodeId: ${nodes.das.master.id}
-        body: ${response.body}
+#    - env.file.Read:
+#        path: ${globals.pwdfile}
+#        nodeId: ${nodes.cp.master.id}
+#    - env.file.Write:
+#        path: ${globals.pwdfile}
+#        nodeId: ${nodes.das.master.id}
+#        body: ${response.body}
     - uploadEncFiles: 
         ids: ${nodes.cp.join(id,)}
     - if (${globals.payara}):
