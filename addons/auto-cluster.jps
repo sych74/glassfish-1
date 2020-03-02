@@ -82,11 +82,8 @@ onAfterResetServicePassword[das]:
     mode: pswd
   
 onAfterBindSSL:
-  - if (nodes.cp.length == 1):
-    - cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh copySSL
-    - if (/^customssl\.conf.*successfully.*$/.test("${response.out}")):
-        cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh installSSL
-        user: root
+  - if (nodes.cp.length == 1): 
+      copySSL
 
 onAfterRemoveSSL:
   - if (nodes.cp.length == 1):
@@ -142,13 +139,14 @@ actions:
     cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh redeploy
     
   copyConfigsAndApps:
-    - cmd[${nodes.cp.master.id}]: |-
-        $STACK_PATH/service.sh copyConfigsAndApps
-        $STACK_PATH/service.sh copySSL
+    - cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh copyConfigsAndApps
+
+  copySSL:
+    - cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh copySSL
     - if (/^customssl\.conf.*successfully.*$/.test("${response.out}")):
         cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh installSSL
         user: root
-      
+    
   exposePort:
     cmd[${this}]: $STACK_PATH/service.sh exposePort ${globals.port}
     user: root
@@ -198,7 +196,8 @@ actions:
     - copyConfigsAndApps
     - api: env.control.ExecDockerRunCmd
       nodeId: ${nodes.das.master.id}
-    - redeployApps  
+    - redeployApps
+    - copySSL
     - restartContainers[${nodes.cp.join(id,)}]
     - restartRequired
     
