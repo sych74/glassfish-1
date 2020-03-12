@@ -25,7 +25,8 @@ onInstall:
       - if (${globals.payara}):
           addHost2Hazelcast: ${nodes.cp.join(id,)}
       - exposePort: ${nodes.cp.join(id,)}
-      - restartContainers[${nodes.cp.join(id,)}]
+      - restartContainers[das,${nodes.cp.join(id,)}]
+      - cmd[das]: $STACK_PATH/service.sh restartCluster
       - restartRequired      
     - else: 
         buildCluster
