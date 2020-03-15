@@ -181,13 +181,6 @@ actions:
     - linkContainers:
         ids: ${nodes.cp.join(id,)}
     - generateSSHKeys
-#    - env.file.Read:
-#        path: ${globals.pwdfile}
-#        nodeId: ${nodes.cp.master.id}
-#    - env.file.Write:
-#        path: ${globals.pwdfile}
-#        nodeId: ${nodes.das.master.id}
-#        body: ${response.body}
     - uploadEncFiles: 
         ids: ${nodes.cp.join(id,)}
     - if (${globals.payara}):
