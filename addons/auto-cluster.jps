@@ -24,7 +24,7 @@ onInstall:
       - cleanCluster
       - if (${globals.payara}):
           addHost2Hazelcast: ${nodes.cp.join(id,)}
-      - restartContainers[${nodes.cp.join(id,)}]
+      - restartService[${nodes.cp.join(id,)}]
       - exposePort: ${nodes.cp.join(id,)}
       - restartRequired      
     - else: 
