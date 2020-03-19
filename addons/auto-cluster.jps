@@ -57,7 +57,7 @@ onAfterScaleIn[cp]:
 
 onAfterClone:
   - script: delete MANIFEST.id; return {result:0, jps:MANIFEST};
-  - install[${targetNodes.nodeGroup}]: ${response.jps}
+  - install: ${response.jps}
     envName: ${event.response.env.envName}    
     settings: 
       clone: true    
