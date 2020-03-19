@@ -4,6 +4,7 @@ version: 1.6.1
 name: Auto-Clustering
 logo: https://github.com/jelastic-jps/glassfish/raw/master/glassfish-cluster/img/glassfish-logo.png
 description: 'Auto-clustering: transforming standalone nodes to cluster'
+targetNodes: none
 
 globals:
   port: 28080
