@@ -48,7 +48,7 @@ onBeforeServiceScaleOut[cp]:
 onBeforeScaleIn[cp]:
   - if (${globals.payara}):
       removeHostFromHazelcast: ${event.response.nodes.join(id,)}
-  - cmd[${event.response.nodes.join(id,)}]: $STACK_PATH/service.sh delete
+  - cmd[${event.response.nodes.join(id,)}]: /usr/local/sbin/jcm.sh delete
   
 onAfterScaleOut[cp]:
   if (nodes.das): restartRequired
@@ -69,14 +69,14 @@ onBeforeSetCloudletCount[cp]:
     
 onAfterSetCloudletCount[cp]:
   if (nodes.das):
-    cmd[das]: $STACK_PATH/service.sh restartAllInstances
+    cmd[das]: /usr/local/sbin/jcm.sh restartAllInstances
     
 onAfterSetCloudletCount[das]:
-  cmd[das]: $STACK_PATH/service.sh restart
+  cmd[das]: /usr/local/sbin/jcm.sh restart
         
 onAfterMigrate:
   - cmd[cp]: |-
-      $STACK_PATH/service.sh addRedirect2Das "node${nodes.das.master.id}-${env.domain}:4848"
+      /usr/local/sbin/jcm.sh addRedirect2Das "node${nodes.das.master.id}-${env.domain}:4848"
 
 onAfterResetServicePassword[das]:
   uploadEncFiles: 
@@ -94,7 +94,7 @@ onAfterRemoveSSL:
   
 actions:
   cleanCluster:
-    cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh clean
+    cmd[${nodes.das.master.id}]: /usr/local/sbin/jcm.sh clean
     
   buildCluster:
     #for 5.8.1+ [---
@@ -135,22 +135,22 @@ actions:
     - configureLinksAndKeys
       
   restartRequired:
-    cmd[das]: $STACK_PATH/service.sh restartRequired
+    cmd[das]: /usr/local/sbin/jcm.sh restartRequired
   
   redeployApps:
-    cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh redeploy
+    cmd[${nodes.cp.master.id}]: /usr/local/sbin/jcm.sh redeploy
     
   copyConfigsAndApps:
-    - cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh copyConfigsAndApps
+    - cmd[${nodes.cp.master.id}]: /usr/local/sbin/jcm.sh copyConfigsAndApps
 
   copySSL:
-    - cmd[${nodes.cp.master.id}]: $STACK_PATH/service.sh copySSL
+    - cmd[${nodes.cp.master.id}]: /usr/local/sbin/jcm.sh copySSL
     - if (/^customssl\.conf.*successfully.*$/.test("${response.out}")):
-        cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh installSSL
+        cmd[${nodes.das.master.id}]: /usr/local/sbin/jcm.sh installSSL
         user: root
     
   exposePort:
-    cmd[${this}]: $STACK_PATH/service.sh exposePort ${globals.port}
+    cmd[${this}]: /usr/local/sbin/jcm.sh exposePort ${globals.port}
     user: root
     
   addHost2Hazelcast:
@@ -164,17 +164,17 @@ actions:
   editHazelcast:
     - script: |
         var ids = "${this.ids}".split(","), cmd = [];
-        for (var i = 0; i < ids.length; i++) cmd.push("$STACK_PATH/service.sh ${this.act}Host node" + ids[i]); 
+        for (var i = 0; i < ids.length; i++) cmd.push("/usr/local/sbin/jcm.sh ${this.act}Host node" + ids[i]); 
         return {result: 0, onAfterReturn: {'cmd[das]': cmd.join("; ")}}
       
   generateSSHKeys: 
-    cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh generateKeys
+    cmd[${nodes.das.master.id}]: /usr/local/sbin/jcm.sh generateKeys
     
   uploadEncFiles:          
-    - cmd[${nodes.das.master.id}]: $STACK_PATH/service.sh getEncFiles ${this.mode:}
+    - cmd[${nodes.das.master.id}]: /usr/local/sbin/jcm.sh getEncFiles ${this.mode:}
     - script: |
         var f = out.split('//////'), action = {}; 
-        action['cmd[' + ids + ']'] = ("$STACK_PATH/service.sh setEncFiles '" + f[0] + (f.length > 1 ? ("' '" + f[1] + "' '" + f[2] + "' '" + f[3])  : "") + "'").replace(/\n/g, "\\n");
+        action['cmd[' + ids + ']'] = ("/usr/local/sbin/jcm.sh setEncFiles '" + f[0] + (f.length > 1 ? ("' '" + f[1] + "' '" + f[2] + "' '" + f[3])  : "") + "'").replace(/\n/g, "\\n");
         return {result:0, onAfterReturn:action}
       out: ${response.out}
       ids: ${this.ids}
