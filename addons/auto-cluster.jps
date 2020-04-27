@@ -48,7 +48,7 @@ onBeforeServiceScaleOut[cp]:
 onBeforeScaleIn[cp]:
   - if (${globals.payara}):
       removeHostFromHazelcast: ${event.response.nodes.join(id,)}
-  - cmd[${event.response.nodes.join(id,)}]: /usr/local/sbin/jcm delete
+  - cmd[${event.response.nodes.join(id,)}]: jcm delete
   
 onAfterScaleOut[cp]:
   if (nodes.das): restartRequired
@@ -69,14 +69,14 @@ onBeforeSetCloudletCount[cp]:
     
 onAfterSetCloudletCount[cp]:
   if (nodes.das):
-    cmd[das]: /usr/local/sbin/jcm restartAllInstances
+    cmd[das]: jcm restartAllInstances
     
 onAfterSetCloudletCount[das]:
-  cmd[das]: /usr/local/sbin/jcm restart
+  cmd[das]: jcm restart
         
 onAfterMigrate:
   - cmd[cp]: |-
-      /usr/local/sbin/jcm addRedirect2Das "node${nodes.das.master.id}-${env.domain}:4848"
+      jcm addRedirect2Das "node${nodes.das.master.id}-${env.domain}:4848"
 
 onAfterResetServicePassword[das]:
   uploadEncFiles: 
@@ -94,7 +94,7 @@ onAfterRemoveSSL:
   
 actions:
   cleanCluster:
-    cmd[${nodes.das.master.id}]: /usr/local/sbin/jcm clean
+    cmd[${nodes.das.master.id}]: jcm clean
     
   buildCluster:
     #for 5.8.1+ [---
@@ -135,22 +135,22 @@ actions:
     - configureLinksAndKeys
       
   restartRequired:
-    cmd[das]: /usr/local/sbin/jcm restartRequired
+    cmd[das]: jcm restartRequired
   
   redeployApps:
-    cmd[${nodes.cp.master.id}]: /usr/local/sbin/jcm redeploy
+    cmd[${nodes.cp.master.id}]: jcm redeploy
     
   copyConfigsAndApps:
-    - cmd[${nodes.cp.master.id}]: /usr/local/sbin/jcm copyConfigsAndApps
+    - cmd[${nodes.cp.master.id}]: jcm copyConfigsAndApps
 
   copySSL:
-    - cmd[${nodes.cp.master.id}]: /usr/local/sbin/jcm copySSL
+    - cmd[${nodes.cp.master.id}]: jcm copySSL
     - if (/^customssl\.conf.*successfully.*$/.test("${response.out}")):
-        cmd[${nodes.das.master.id}]: /usr/local/sbin/jcm installSSL
+        cmd[${nodes.das.master.id}]: jcm installSSL
         user: root
     
   exposePort:
-    cmd[${this}]: /usr/local/sbin/jcm exposePort ${globals.port}
+    cmd[${this}]: jcm exposePort ${globals.port}
     user: root
     
   addHost2Hazelcast:
@@ -164,17 +164,17 @@ actions:
   editHazelcast:
     - script: |
         var ids = "${this.ids}".split(","), cmd = [];
-        for (var i = 0; i < ids.length; i++) cmd.push("/usr/local/sbin/jcm ${this.act}Host node" + ids[i]); 
+        for (var i = 0; i < ids.length; i++) cmd.push("jcm ${this.act}Host node" + ids[i]); 
         return {result: 0, onAfterReturn: {'cmd[das]': cmd.join("; ")}}
       
   generateSSHKeys: 
-    cmd[${nodes.das.master.id}]: /usr/local/sbin/jcm generateKeys
+    cmd[${nodes.das.master.id}]: jcm generateKeys
     
   uploadEncFiles:          
-    - cmd[${nodes.das.master.id}]: /usr/local/sbin/jcm getEncFiles ${this.mode:}
+    - cmd[${nodes.das.master.id}]: jcm getEncFiles ${this.mode:}
     - script: |
         var f = out.split('//////'), action = {}; 
-        action['cmd[' + ids + ']'] = ("/usr/local/sbin/jcm setEncFiles '" + f[0] + (f.length > 1 ? ("' '" + f[1] + "' '" + f[2] + "' '" + f[3])  : "") + "'").replace(/\n/g, "\\n");
+        action['cmd[' + ids + ']'] = ("jcm setEncFiles '" + f[0] + (f.length > 1 ? ("' '" + f[1] + "' '" + f[2] + "' '" + f[3])  : "") + "'").replace(/\n/g, "\\n");
         return {result:0, onAfterReturn:action}
       out: ${response.out}
       ids: ${this.ids}
