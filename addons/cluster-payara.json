@@ -13,7 +13,7 @@
   "validation": {
       "scalingMode": "STATELESS"
   },
-  "description" : "Interconnection of Payara servers with pre-configured session replication and load balancing. <a href='https://jelastic.com/blog/glassfish-payara-auto-clustering-cloud-hosting/'>Learn More</a><img width='290' height='156' src='https://raw.githubusercontent.com/jelastic/icons/master/payara/jelastic/images/tip-auto-clustering.svg?sanitize=true'>",
+  "description" : "<h3>Scalable Cluster with High Availability</h3>Interconnection of Payara servers with pre-configured session replication and load balancing. <a href='https://jelastic.com/blog/glassfish-payara-auto-clustering-cloud-hosting/'>Learn More</a><img width='290' height='156' src='https://raw.githubusercontent.com/jelastic/icons/master/payara/jelastic/images/tip-auto-clustering.svg?sanitize=true'>",
   "skipOnEnvInstall": true,
   "extraNodes": {
     "nodeGroup": "das",
