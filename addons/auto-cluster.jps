@@ -91,7 +91,10 @@ onAfterRemoveSSL:
   - if (nodes.cp.length == 1):
     - cmd[${nodes.das.master.id}]: jem ssl remove
       user: root
-  
+
+onAfterRedeployContainer[das]:
+    cmd[das]: jcm runStopped
+
 actions:
   cleanCluster:
     cmd[${nodes.das.master.id}]: jcm clean
