@@ -1,8 +1,7 @@
 {
   "convertable" : true,
-  "jps"         : "https://raw.githubusercontent.com/sych74/glassfish-1/master/addons/auto-cluster.jps",  
+  "jps"         : "https://raw.githubusercontent.com/sych74/glassfish-1/master/addons/auto-cluster2.jps",
   "defaultState": false,
-    
    "compatibleAddons": ["glassfish-cluster-addon"],
    "nodeGroupData": {
     "skipNodeEmails": true,
