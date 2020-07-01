@@ -64,12 +64,20 @@ onAfterClone:
       clone: true    
     
 onBeforeSetCloudletCount[cp]:
-  if (nodes.das):
-    cmd[${nodes.cp.master.id}]: touch $STACK_PATH/.skiprestart
+  - if ('${fn.compareEngine(1.8.1):}' < 0 || ${nodes.cp.master.flexibleCloudlets} < ${event.params.flexibleCloudlets}):
+      if (nodes.das):
+        cmd[${nodes.cp.master.id}]: touch $STACK_PATH/.skiprestart
+  - else:
+      if (${nodes.cp.master.flexibleCloudlets} > ${event.params.flexibleCloudlets} && (nodes.das)):
+        cmd[das]: touch $STACK_PATH/.skiprestartall
     
 onAfterSetCloudletCount[cp]:
   if (nodes.das):
     cmd[das]: jcm restartAllInstances
+
+onBeforeSetCloudletCount[das]:
+  if (${nodes.das.master.flexibleCloudlets} > ${event.params.flexibleCloudlets}):
+    cmd[das]: touch $STACK_PATH/.skiprestartall
     
 onAfterSetCloudletCount[das]:
   cmd[das]: jcm restart
