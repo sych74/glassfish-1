@@ -73,7 +73,7 @@ onBeforeSetCloudletCount[cp]:
     
 onAfterSetCloudletCount[cp]:
   if (nodes.das):
-    cmd[das]: jcm restartAllInstances
+    cmd[cp]: jcm restartAllInstances
 
 onBeforeSetCloudletCount[das]:
   if (${nodes.das.master.flexibleCloudlets} > ${event.params.flexibleCloudlets}):
